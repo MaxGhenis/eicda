@@ -11,34 +11,36 @@ cuid_sporder = pd.DataFrame(
 )
 p = pd.read_csv("data/acs_poverty.csv.gz")
 
+for d in [cu, cuid_sporder]:
+    d.columns = d.columns.str.lower()
+
+CU_METRICS = ["tco2", "tco2_direct", "invest_assets"]
+cu.rename(
+    columns=dict(zip(CU_METRICS, [i + "_cu" for i in CU_METRICS])),
+    inplace=True,
+)
+
 # Per Kevin Ummel, serialno is first 13 characters of CUID
 def cuid2serialno(cuid):
     return cuid.str[6:13].astype(int)
 
 
-cuid_sporder["serialno"] = cuid2serialno(cuid_sporder.CUID)
-cu["serialno"] = cuid2serialno(cu.CUID)
-# Household dataset formed from the CU dataset.
-h_co2 = cu.drop(columns="CUID").groupby("serialno").sum().reset_index()
-# Columns to rename as they're aggregated to household.
-h_co2_cols = h_co2.columns.drop("serialno")
-h_co2.rename(
-    columns=dict(zip(h_co2_cols, [i + "_hh" for i in h_co2_cols])),
-    inplace=True,
-)
+cuid_sporder["serialno"] = cuid2serialno(cuid_sporder.cuid)
+
+p = p.merge(cuid_sporder, on=["serialno", "sporder"]).merge(cu, on="cuid")
 # Assign emissions equally across household members.
-p_per_h = (
-    p.groupby("serialno")
-    .size()
+p["person"] = 1
+p_per_cu = (
+    p.groupby("cuid")[["person"]]
+    .sum()
     .reset_index()
-    .rename(columns={0: "people_in_hh"})
+    .rename(columns=dict(person="people_in_cu"))
 )
-p = p.merge(p_per_h, on="serialno").merge(h_co2, on="serialno")
-for i in h_co2_cols:
-    p[i] = p[i + "_hh"] / p.people_in_hh
+p = p.merge(p_per_cu, on="cuid")
+for i in CU_METRICS:
+    p[i] = p[i + "_cu"] / p.people_in_cu
 
 SPMU_COLS = ["id", "povthreshold", "resources"]
-p["person"] = 1
 s = (
     p.groupby(["spm_" + i for i in SPMU_COLS])[["person", "tco2"]]
     .sum()
