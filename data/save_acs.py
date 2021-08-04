@@ -10,6 +10,7 @@ p = pd.read_stata(
         "spm_id",
         "spm_povthreshold",
         "spm_resources",
+        "st",
     ],
 )
 
