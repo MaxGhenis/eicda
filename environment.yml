@@ -1,4 +1,4 @@
-name: reponame
+name: us-carbon-dividend
 dependencies:
 - python
 - plotly
