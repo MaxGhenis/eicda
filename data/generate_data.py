@@ -40,17 +40,25 @@ p = p.merge(p_per_cu, on="cuid")
 for i in CU_METRICS:
     p[i] = p[i + "_cu"] / p.people_in_cu
 
+# Adjust population and CO2 to match administrative sources for 2021.
+# Source: https://www.macrotrends.net/countries/USA/united-states/population
+TRUE_POP = 332_915_073
+# Source: https://www.rff.org/publications/data-tools/carbon-pricing-calculator
+TRUE_CO2 = 5.05e9
+tmp_pop = p.wt.sum()
+tmp_co2 = mdf.weighted_sum(p, "tco2", "wt")
+p.tco2 *= TRUE_CO2 / tmp_co2
+p.wt *= TRUE_POP / tmp_pop
+co2_pp = TRUE_CO2 / TRUE_POP
+p["age_group"] = np.where(p.age < 18, "Child", "Adult")
+
+
 SPMU_COLS = ["id", "povthreshold", "resources"]
 s = (
     p.groupby(["spm_" + i for i in SPMU_COLS])[["person", "tco2"]]
     .sum()
     .reset_index()
 )
-
-total_co2 = mdf.weighted_sum(p, "tco2", "wt")
-total_pop = p.wt.sum()
-co2_pp = total_co2 / total_pop
-p["age_group"] = np.where(p.age < 18, "Child", "Adult")
 
 
 def carbon_dividend(price):
