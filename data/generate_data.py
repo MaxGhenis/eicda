@@ -64,12 +64,27 @@ s = (
 def carbon_dividend(price):
     def pov_metrics(p):
         poverty = mdf.poverty_rate(
-            p, "spm_resources_new", "spm_povthreshold", "wt",
+            p,
+            "spm_resources_new",
+            "spm_povthreshold",
+            "wt",
         )
         deep_poverty = mdf.deep_poverty_rate(
-            p, "spm_resources_new", "spm_povthreshold", "wt",
+            p,
+            "spm_resources_new",
+            "spm_povthreshold",
+            "wt",
         )
-        return pd.Series(dict(poverty=poverty, deep_poverty=deep_poverty))
+        winner_share = (
+            p[p.spm_resources_new > p.spm_resources].wt.sum() / p.wt.sum()
+        )
+        return pd.Series(
+            dict(
+                poverty=poverty,
+                deep_poverty=deep_poverty,
+                winner_share=winner_share,
+            )
+        )
 
     dividend = co2_pp * price
     s["dividend"] = s.person * dividend
